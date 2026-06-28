@@ -1,25 +1,44 @@
-import bcrypt from "bcryptjs";
-import { prisma } from "../../lib/prisma";
-import config from "../../config";
+
 import httpsStatus from "http-status"
-import { Request, Response } from "express";
-import { create } from "node:domain";
+import { NextFunction, Request, RequestHandler, response, Response } from "express";
 import userService from "./user.service";
+import { catchAsync } from "../../utils/catchAsync";
 
-const createUser =async (req: Request, res: Response) => {
-    
-       const payload = req.body;
+type TMeta = {
+        page:number;
+        limit:number;
+        total:number;
+    }
+type TResponseData<T> = {
+    success: boolean;
+    statusCode: number;
+    message: string;
+    data:T;
+    meta?: TMeta
 
-       const user = await userService.registerUserIntoDB(payload);
-
-        
-        res.status(httpsStatus.CREATED).json({
-            message: "User created successfully",
-            data: { user },
-        });
-
-   
 }
+
+export const sendResponse = <T>(res:Response, data: TResponseData<T>)=>{
+    res.status(data.statusCode).json({
+        success: data.success,
+        statusCode: data.statusCode,
+        message: data.message,
+        data: data.data,
+        meta: data.meta
+    })
+}
+
+const createUser= catchAsync(async(req:Request,res:Response,next:NextFunction)=>{
+    const payload = req.body;
+    const user= await userService.registerUserIntoDB(payload);
+
+    sendResponse(res,{
+        success:true,
+        statusCode:httpsStatus.CREATED,
+        message: "user registered successfully",
+        data: {user}
+    })
+})
 
 const userController= {
     createUser
