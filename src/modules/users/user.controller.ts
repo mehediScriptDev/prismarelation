@@ -3,6 +3,9 @@ import httpsStatus from "http-status"
 import { NextFunction, Request, RequestHandler, response, Response } from "express";
 import userService from "./user.service";
 import { catchAsync } from "../../utils/catchAsync";
+import config from "../../config";
+import jwt from "jsonwebtoken";
+import { jwtUtils } from "../../utils/jwt";
 
 type TMeta = {
         page:number;
@@ -40,7 +43,26 @@ const createUser= catchAsync(async(req:Request,res:Response,next:NextFunction)=>
     })
 })
 
+const getMe = catchAsync(async(req:Request,res:Response,next:NextFunction)=>{
+    const {accessToken} = req.cookies;
+    const verifiedToken = jwtUtils.verifyToken(accessToken, config.jwt_access_secret);
+
+    if(typeof verifiedToken === "string"){
+        throw new Error("Invalid token");
+    }
+
+const profile = await userService.getMeFromDB(verifiedToken.id);
+
+    sendResponse(res,{
+        success:true,
+        statusCode:httpsStatus.OK,
+        message: "user profile fetched successfully",
+        data: {profile}
+    })
+})
+
 const userController= {
-    createUser
+    createUser,
+    getMe
 }
 export default userController;
